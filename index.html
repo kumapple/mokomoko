@@ -2,113 +2,296 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>課題管理マネージャー</title>
+    <title>くまさんの全一覧対応・課題帳</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f4f7f6; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; }
-        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        input, textarea, button { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        textarea { grid-column: span 2; height: 60px; }
-        button { grid-column: span 2; background-color: #28a745; color: white; cursor: pointer; border: none; font-weight: bold; }
-        button:hover { background-color: #218838; }
+        :root {
+            --primary-brown: #a67c52;
+            --light-brown: #d9b99b;
+            --dark-brown: #7f5539;
+            --accent-honey: #f4d35e;
+            --text-color: #5d4037;
+            --bg-color: #fdfaf5;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex; justify-content: center; min-height: 100vh;
+        }
+
+        .app-window {
+            background: white; border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(166, 124, 82, 0.2);
+            width: 95%; max-width: 1000px; overflow: hidden;
+            border: 2px solid var(--primary-brown);
+        }
+
+        .title-bar {
+            background-color: var(--primary-brown); color: white;
+            padding: 15px 20px; font-weight: bold; display: flex; align-items: center;
+        }
+
+        .content { padding: 25px; }
+
+        /* フォルダタブ */
+        .folder-tabs {
+            display: flex; gap: 5px; margin-bottom: -2px; overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 20px; background: #e0d5c8; border: 2px solid var(--primary-brown);
+            border-bottom: none; border-radius: 12px 12px 0 0; cursor: pointer;
+            font-weight: bold; color: var(--dark-brown); transition: 0.3s; white-space: nowrap;
+        }
+        .tab.active { background: white; border-bottom: 2px solid white; z-index: 1; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f8f9fa; color: #555; }
-        .overdue { color: red; font-weight: bold; }
+        /* 「すべて」タブ専用のカラー */
+        .tab.all-tab { background: #d2b48c; }
+        .tab.all-tab.active { background: white; color: #8b4513; }
+
+        .main-panel {
+            border: 2px solid var(--primary-brown); border-radius: 0 12px 12px 12px;
+            padding: 20px; background: white; margin-bottom: 20px;
+        }
+
+        /* 入力エリア */
+        .input-group {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+            background: #fdf6ec; padding: 15px; border-radius: 12px; margin-bottom: 20px;
+        }
+        input, select, textarea, button { padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        textarea { grid-column: span 3; height: 50px; }
+        .add-btn { grid-column: span 3; background: var(--accent-honey); font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
+        .add-btn:hover { background: #f1c40f; }
+        .add-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+
+        /* 進捗バー */
+        .progress-label { font-size: 12px; margin-bottom: 5px; display: block; color: var(--primary-brown); }
+        .progress-container {
+            background: #eee; border-radius: 20px; height: 15px; position: relative; margin-bottom: 20px;
+        }
+        #progressBar { height: 100%; background: var(--accent-honey); border-radius: 20px; transition: 0.5s; width: 0%; }
+
+        /* テーブル */
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f1e9; padding: 10px; font-size: 0.8em; text-align: left; }
+        td { padding: 12px 10px; border-bottom: 1px solid #eee; }
+        .priority-star { color: var(--accent-honey); font-weight: bold; }
+        .completed { opacity: 0.5; text-decoration: line-through; background: #f9f9f9; }
+        .folder-tag { 
+            font-size: 10px; background: var(--light-brown); color: white; 
+            padding: 2px 6px; border-radius: 4px; margin-right: 5px; 
+        }
+
+        .delete-btn { color: #e74c3c; border: 1px solid #e74c3c; background: none; cursor: pointer; border-radius: 4px; padding: 2px 8px; }
+        .delete-btn:hover { background: #e74c3c; color: white; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>📚 課題管理リスト</h1>
+<div class="app-window">
+    <div class="title-bar">🐻 くまさんの全一覧対応・課題帳</div>
     
-    <!-- 入力エリア -->
-    <div class="input-group">
-        <input type="text" id="courseName" placeholder="授業名">
-        <input type="text" id="title" placeholder="課題のタイトル">
-        <input type="datetime-local" id="deadline">
-        <textarea id="content" placeholder="課題の内容・メモ"></textarea>
-        <button onclick="addTask()">課題を追加する</button>
-    </div>
+    <div class="content">
+        <div class="folder-tabs" id="folderTabs"></div>
+        
+        <div class="main-panel">
+            <span class="progress-label" id="progressLabel">現在の進捗</span>
+            <div class="progress-container"><div id="progressBar"></div></div>
 
-    <!-- 表示エリア -->
-    <table>
-        <thead>
-            <tr>
-                <th>期限</th>
-                <th>授業名</th>
-                <th>タイトル</th>
-                <th>内容</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody id="taskList"></tbody>
-    </table>
+            <!-- 入力グループ -->
+            <div class="input-group" id="inputArea">
+                <input type="text" id="courseName" placeholder="授業名">
+                <input type="text" id="title" placeholder="課題名">
+                <select id="priority">
+                    <option value="1">優先度：🍯 (低)</option>
+                    <option value="2">優先度：🍯🍯 (中)</option>
+                    <option value="3" selected>優先度：🍯🍯🍯 (高)</option>
+                </select>
+                <input type="datetime-local" id="deadline" style="grid-column: span 3;">
+                <textarea id="contentInput" placeholder="メモ..."></textarea>
+                <button class="add-btn" id="addBtn" onclick="addTask()">このフォルダに課題を追加</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px">完了</th>
+                        <th style="width:80px">優先度</th>
+                        <th style="width:120px">期限</th>
+                        <th>課題内容</th>
+                        <th style="width:60px">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="taskList"></tbody>
+            </table>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="addFolder()" style="font-size: 12px; background: white; border: 1px solid var(--primary-brown); color: var(--primary-brown); cursor: pointer; border-radius: 4px; padding: 5px 10px;">＋ フォルダを追加</button>
+            <button onclick="deleteCurrentFolder()" id="delFolderBtn" style="font-size: 12px; background: white; border: 1px solid #e74c3c; color: #e74c3c; cursor: pointer; border-radius: 4px; padding: 5px 10px; display:none;">フォルダを削除</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    let tasks = [];
+    // データ構造
+    let data = JSON.parse(localStorage.getItem('bearTaskDataAll')) || {
+        currentFolder: 'すべて',
+        folders: ['すべて', '学校', 'プライベート'],
+        tasks: []
+    };
+
+    function save() {
+        localStorage.setItem('bearTaskDataAll', JSON.stringify(data));
+    }
+
+    function addFolder() {
+        const name = prompt("新しいフォルダの名前を入力してね🐻\n(「すべて」は一覧表示用なので、別の名前にしてね)");
+        if (name && name !== 'すべて' && !data.folders.includes(name)) {
+            data.folders.push(name);
+            data.currentFolder = name;
+            save();
+            renderTabs();
+            updateDisplay();
+        }
+    }
+
+    function deleteCurrentFolder() {
+        if (data.currentFolder === 'すべて') return;
+        if (confirm(`🐻「${data.currentFolder}」フォルダと、その中の課題を全部消しちゃうよ？いい？`)) {
+            data.tasks = data.tasks.filter(t => t.folder !== data.currentFolder);
+            data.folders = data.folders.filter(f => f !== data.currentFolder);
+            data.currentFolder = 'すべて';
+            save();
+            renderTabs();
+            updateDisplay();
+        }
+    }
+
+    function renderTabs() {
+        const tabs = document.getElementById('folderTabs');
+        tabs.innerHTML = '';
+        data.folders.forEach(folder => {
+            const btn = document.createElement('div');
+            btn.className = `tab ${folder === 'すべて' ? 'all-tab' : ''} ${data.currentFolder === folder ? 'active' : ''}`;
+            btn.innerText = folder === 'すべて' ? '🐾 すべて' : folder;
+            btn.onclick = () => {
+                data.currentFolder = folder;
+                save();
+                renderTabs();
+                updateDisplay();
+            };
+            tabs.appendChild(btn);
+        });
+
+        // 削除ボタンの表示制御
+        const delBtn = document.getElementById('delFolderBtn');
+        delBtn.style.display = (data.currentFolder === 'すべて') ? 'none' : 'block';
+    }
 
     function addTask() {
-        const courseName = document.getElementById('courseName').value;
         const title = document.getElementById('title').value;
         const deadline = document.getElementById('deadline').value;
-        const content = document.getElementById('content').value;
-
-        if (!title || !deadline) {
-            alert("タイトルと期限は必須です！");
-            return;
-        }
+        if (!title || !deadline) return alert("タイトルと期限は必須だよ！🐻");
 
         const task = {
             id: Date.now(),
-            courseName,
-            title,
-            deadline: new Date(deadline),
-            content
+            folder: data.currentFolder,
+            courseName: document.getElementById('courseName').value,
+            title: title,
+            priority: document.getElementById('priority').value,
+            deadline: deadline,
+            content: document.getElementById('contentInput').value,
+            isDone: false
         };
 
-        tasks.push(task);
+        data.tasks.push(task);
+        save();
         updateDisplay();
         
-        // フォームをリセット
-        document.querySelectorAll('input, textarea').forEach(el => el.value = '');
+        document.getElementById('title').value = '';
+        document.getElementById('contentInput').value = '';
+    }
+
+    function toggleTask(id) {
+        const task = data.tasks.find(t => t.id === id);
+        if (task) task.isDone = !task.isDone;
+        save();
+        updateDisplay();
     }
 
     function deleteTask(id) {
-        tasks = tasks.filter(t => t.id !== id);
+        data.tasks = data.tasks.filter(t => t.id !== id);
+        save();
         updateDisplay();
     }
 
     function updateDisplay() {
         const list = document.getElementById('taskList');
+        const inputArea = document.getElementById('inputArea');
+        const progressLabel = document.getElementById('progressLabel');
         list.innerHTML = '';
 
-        // 期限順にソート（昇順）
-        tasks.sort((a, b) => a.deadline - b.deadline);
+        // 「すべて」フォルダの場合は入力不可にする
+        if (data.currentFolder === 'すべて') {
+            inputArea.style.opacity = "0.5";
+            inputArea.style.pointerEvents = "none";
+            document.getElementById('addBtn').innerText = "🐻 全一覧モードでは追加できません";
+            progressLabel.innerText = "🌟 全体の達成度";
+        } else {
+            inputArea.style.opacity = "1";
+            inputArea.style.pointerEvents = "auto";
+            document.getElementById('addBtn').innerText = `「${data.currentFolder}」に課題を追加`;
+            progressLabel.innerText = `🍯 ${data.currentFolder} の進捗`;
+        }
 
-        tasks.forEach(task => {
+        // 表示するタスクのフィルタリング
+        let displayTasks = (data.currentFolder === 'すべて') 
+            ? [...data.tasks] 
+            : data.tasks.filter(t => t.folder === data.currentFolder);
+        
+        // ソート: 未完了優先 > 優先度順 > 期限順
+        displayTasks.sort((a, b) => {
+            if (a.isDone !== b.isDone) return a.isDone - b.isDone;
+            if (b.priority !== a.priority) return b.priority - a.priority;
+            return new Date(a.deadline) - new Date(b.deadline);
+        });
+
+        displayTasks.forEach(task => {
             const row = document.createElement('tr');
-            const now = new Date();
-            const deadlineStr = task.deadline.toLocaleString('ja-JP', {
-                year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-            });
-
-            // 期限切れチェック
-            const isOverdue = task.deadline < now ? 'class="overdue"' : '';
+            if (task.isDone) row.className = 'completed';
+            
+            const stars = "🍯".repeat(task.priority);
+            const date = new Date(task.deadline).toLocaleString('ja-JP', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+            
+            // 「すべて」表示の時は、どのフォルダのタスクか分かるようにタグを出す
+            const folderTag = (data.currentFolder === 'すべて') 
+                ? `<span class="folder-tag">${task.folder}</span>` 
+                : '';
 
             row.innerHTML = `
-                <td ${isOverdue}>${deadlineStr}</td>
-                <td>${task.courseName}</td>
-                <td>${task.title}</td>
-                <td>${task.content}</td>
-                <td><button onclick="deleteTask(${task.id})" style="background:#dc3545; width:auto; padding:5px 10px;">削除</button></td>
+                <td style="text-align:center"><input type="checkbox" ${task.isDone?'checked':''} onchange="toggleTask(${task.id})"></td>
+                <td class="priority-star">${stars}</td>
+                <td style="font-size:11px">${date}</td>
+                <td>
+                    ${folderTag}<small style="color:var(--primary-brown)">${task.courseName}</small><br>
+                    <strong>${task.title}</strong>
+                </td>
+                <td><button class="delete-btn" onclick="deleteTask(${task.id})">削除</button></td>
             `;
             list.appendChild(row);
         });
+
+        // 進捗バー更新
+        const doneCount = displayTasks.filter(t => t.isDone).length;
+        const percent = displayTasks.length ? Math.round((doneCount / displayTasks.length) * 100) : 0;
+        document.getElementById('progressBar').style.width = percent + '%';
     }
+
+    // 初期化
+    renderTabs();
+    updateDisplay();
 </script>
 
 </body>
