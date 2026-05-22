@@ -3,281 +3,597 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ちきゅう防衛軍風・バケットリスト</title>
-    <!-- Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons for nice UI -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen pb-12">
+    <title>1週間 定期予定・日程調整ツール</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --text-color: #1f2937;
+            --busy-color: #ef4444;
+            --free-color: #10b981;
+        }
 
-    <div class="max-w-2xl mx-auto px-4 pt-8">
-        <!-- ヘッダー -->
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                    <i data-lucide="sparkles" class="text-amber-500"></i> 死ぬまでにやりたいこと
-                </h1>
-                <p class="text-xs text-slate-500 mt-1">とりあえず入れて、期限が来たら勝手に移動</p>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            color: #111827;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.9rem;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* メンバー管理 */
+        .member-input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .member-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            background: #f3f4f6;
+            transition: all 0.2s;
+        }
+
+        .member-item.active {
+            background-color: #eef2ff;
+            border-color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .member-item .delete-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0 4px;
+        }
+
+        .member-item .delete-btn:hover {
+            color: #dc2626;
+        }
+
+        /* スケジュールグリッド */
+        .grid-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .grid-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .grid-legend {
+            font-size: 0.8rem;
+            display: flex;
+            gap: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            border: 1px solid var(--border-color);
+        }
+
+        .legend-box.free { background-color: #fff; }
+        .legend-box.busy { background-color: #fca5a5; }
+
+        .timetable-container {
+            overflow-x: auto;
+        }
+
+        .timetable {
+            display: grid;
+            grid-template-columns: 60px repeat(7, minmax(90px, 1fr));
+            border-left: 1px solid var(--border-color);
+            border-top: 1px solid var(--border-color);
+            user-select: none;
+        }
+
+        .cell {
+            padding: 6px 4px;
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.8rem;
+            background: #fff;
+        }
+
+        .cell.header {
+            background-color: #f3f4f6;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+
+        .cell.time-label {
+            background-color: #f3f4f6;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell.slot {
+            cursor: pointer;
+            height: 28px;
+            transition: background-color 0.1s;
+        }
+
+        /* 予定あり（ブロック）状態 */
+        .cell.slot.busy {
+            background-color: #fca5a5; /* 薄い赤 */
+        }
+        .cell.slot.busy:hover {
+            background-color: #f87171;
+        }
+        .cell.slot:not(.busy):hover {
+            background-color: #e0e7ff;
+        }
+
+        /* 結果出力エリア */
+        .results-section {
+            margin-top: 20px;
+        }
+
+        .result-group {
+            margin-bottom: 12px;
+        }
+
+        .result-day-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #374151;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 2px;
+        }
+
+        .time-badge {
+            display: inline-block;
+            background-color: #d1fae5;
+            color: #065f46;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .no-results {
+            color: #6b7280;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>1週間 定期予定・日程調整ツール</h1>
+    
+    <div class="description">
+        <strong>使い方：</strong><br>
+        1. 左側でメンバーを追加し、名前を選択します。<br>
+        2. 右側のカレンダー上で、その人の<strong>「外せない予定が入っている時間帯」</strong>をドラッグまたはクリックして赤く塗りつぶします。<br>
+        3. 全員の入力が終わると、最下部に<strong>全員が共通して空いている時間帯</strong>が自動的に抽出されます。
+    </div>
+
+    <div class="layout">
+        <!-- 左サイドバー: メンバー管理 -->
+        <div class="card">
+            <h3>メンバー一覧</h3>
+            <div class="member-input-group">
+                <input type="text" id="memberInput" placeholder="名前を入力" maxlength="10">
+                <button onclick="addMember()">追加</button>
             </div>
-            
-            <!-- 共有・閲覧モード切り替え -->
-            <div class="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
-                <button id="btn-edit-mode" onclick="setMode('edit')" class="px-3 py-1.5 text-xs font-medium rounded-md flex items-center gap-1 transition-colors bg-indigo-50 text-indigo-700">
-                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i> 編集・追加
-                </button>
-                <button id="btn-share-mode" onclick="setMode('share')" class="px-3 py-1.5 text-xs font-medium rounded-md flex items-center gap-1 transition-colors text-slate-600 hover:text-slate-900">
-                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> 友達に見せる
-                </button>
-            </div>
+            <ul class="member-list" id="memberList">
+                <!-- JavaScriptで動的に追加 -->
+            </ul>
         </div>
 
-        <!-- 追加フォーム (編集モード時のみ表示) -->
-        <div id="input-form" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm mb-6">
-            <div class="flex flex-col gap-3">
-                <input type="text" id="todo-text" placeholder="例：オーロラを見に行く、富士山に登る" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                
-                <div class="flex gap-2 items-center">
-                    <div class="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-                        <label for="todo-deadline" class="text-xs text-slate-500 whitespace-nowrap flex items-center gap-1">
-                            <i data-lucide="calendar" class="w-3.5 h-3.5"></i> 期限：
-                        </label>
-                        <input type="month" id="todo-deadline" class="bg-transparent text-sm w-full focus:outline-none">
-                    </div>
-                    <button onclick="addTodo()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg flex items-center gap-1 shadow-sm transition-colors shrink-0">
-                        <i data-lucide="plus" class="w-4 4-4"></i> 追加
-                    </button>
+        <!-- 右メイン: スケジュール入力グリッド -->
+        <div class="card">
+            <div class="grid-header">
+                <div class="grid-title"><span id="currentMemberName">メンバーを選択してください</span> の予定</div>
+                <div class="grid-legend">
+                    <div class="legend-item"><div class="legend-box free"></div>空き</div>
+                    <div class="legend-item"><div class="legend-box busy"></div>予定あり(ブロック)</div>
+                </div>
+            </div>
+            
+            <div class="timetable-container">
+                <div class="timetable" id="timetable">
+                    <!-- JavaScriptでグリッドを自動生成 -->
                 </div>
             </div>
         </div>
-
-        <!-- タブ切り替え -->
-        <div class="flex border-b border-slate-200 mb-4 text-sm font-medium">
-            <button id="tab-active" onclick="switchTab('active')" class="flex-1 text-center py-2.5 border-b-2 border-indigo-600 text-indigo-600 transition-all flex items-center justify-center gap-1">
-                挑戦中 <span id="count-active" class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-            </button>
-            <button id="tab-completed" onclick="switchTab('completed')" class="flex-1 text-center py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center gap-1">
-                達成！ <span id="count-completed" class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-            </button>
-            <button id="tab-expired" onclick="switchTab('expired')" class="flex-1 text-center py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center gap-1">
-                期限切れ <span id="count-expired" class="bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-            </button>
-        </div>
-
-        <!-- リスト表示エリア -->
-        <div id="todo-list" class="space-y-2.5">
-            <!-- JSで動的に生成されます -->
-        </div>
     </div>
 
-    <script>
-        // データ構造の初期化
-        let todos = JSON.parse(localStorage.getItem('bucket_list_items')) || [];
-        let currentTab = 'active'; // active, completed, expired
-        let currentMode = 'edit'; // edit, share
+    <!-- 下部: 全員の空き時間抽出結果 -->
+    <div class="card results-section">
+        <h2>全員が空いている時間帯</h2>
+        <div id="matchingResults">
+            <p class="no-results">メンバーを登録するとここに候補時間が表示されます。</p>
+        </div>
+    </div>
+</div>
 
-        // 起動時処理
-        function init() {
-            lucide.createIcons();
-            render();
-        }
+<script>
+    // 定数定義
+    const DAYS = ['月', '火', '水', '木', '金', '土', '日'];
+    const START_HOUR = 8;  // 開始時間 (24時間表記)
+    const END_HOUR = 23;   // 終了時間 (23時台まで)
+    const TOTAL_HOURS = END_HOUR - START_HOUR + 1;
 
-        // 新しいやりたいことを追加
-        function addTodo() {
-            const textInput = document.getElementById('todo-text');
-            const deadlineInput = document.getElementById('todo-deadline');
+    // アプリケーションの状態管理
+    let members = {
+        'サンプル A': createEmptySchedule(),
+        'サンプル B': createEmptySchedule()
+    };
+    let currentMember = 'サンプル A';
 
-            if (!textInput.value.trim()) return;
+    // マウスドラッグ選択用フラグ
+    let isMouseDown = false;
+    let dragTargetState = true; // ドラッグ開始時に反転させるターゲット状態(true=busy, false=free)
 
-            const newItem = {
-                id: Date.now().toString(),
-                text: textInput.value.trim(),
-                deadline: deadlineInput.value || null, // YYYY-MM
-                completed: false,
-                createdAt: new Date().toISOString()
-            };
+    // 初期化処理
+    window.addEventListener('DOMContentLoaded', () => {
+        initTimetableHeaders();
+        initTimetableCells();
+        renderMemberList();
+        updateCurrentMemberUI();
+        
+        // ドラッグ終了イベントをウィンドウ全体で検知
+        window.addEventListener('mouseup', () => { isMouseDown = false; });
+    });
 
-            todos.push(newItem);
-            saveData();
+    // 空のスケジュールデータを作成 (曜日のインデックス 0~6 × 時間のインデックス 0~TOTAL_HOURS)
+    // false = 空き時間, true = 外せない予定あり
+    function createEmptySchedule() {
+        let schedule = {};
+        DAYS.forEach((day, dIdx) => {
+            schedule[dIdx] = new Array(TOTAL_HOURS).fill(false);
+        });
+        return schedule;
+    }
+
+    // タイムテーブルのヘッダー（曜日行）を作成
+    function initTimetableHeaders() {
+        const table = document.getElementById('timetable');
+        // 左上の空白のマス
+        const corner = document.createElement('div');
+        corner.className = 'cell header';
+        corner.innerText = '時間';
+        table.appendChild(corner);
+
+        // 曜日ヘッダー
+        DAYS.forEach(day => {
+            const th = document.createElement('div');
+            th.className = 'cell header';
+            th.innerText = day;
+            table.appendChild(th);
+        });
+    }
+
+    // タイムテーブルのセルの生成
+    function initTimetableCells() {
+        const table = document.getElementById('timetable');
+
+        for (let h = 0; h < TOTAL_HOURS; h++) {
+            const hourText = (START_HOUR + h) + ':00';
             
-            // フォームクリア
-            textInput.value = '';
-            deadlineInput.value = '';
-            render();
+            // 時間ラベル（左端カラム）
+            const timeLabel = document.createElement('div');
+            timeLabel.className = 'cell time-label';
+            timeLabel.innerText = hourText;
+            table.appendChild(timeLabel);
+
+            // 各曜日のセル
+            for (let d = 0; d < 7; d++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell slot';
+                cell.dataset.day = d;
+                cell.dataset.hourIdx = h;
+
+                // マウスイベントの設定（ドラッグで塗りつぶし可能にする）
+                cell.addEventListener('mousedown', (e) => {
+                    if (!currentMember) return;
+                    isMouseDown = true;
+                    // クリックしたマスの状態を反転
+                    dragTargetState = !members[currentMember][d][h];
+                    toggleCellState(d, h, dragTargetState);
+                });
+
+                cell.addEventListener('mouseenter', () => {
+                    if (isMouseDown && currentMember) {
+                        toggleCellState(d, h, dragTargetState);
+                    }
+                });
+
+                table.appendChild(cell);
+            }
+        }
+    }
+
+    // 特定のセルの状態を切り替えてUIとデータを更新
+    function toggleCellState(dayIdx, hourIdx, setBusy) {
+        if (!currentMember) return;
+        members[currentMember][dayIdx][hourIdx] = setBusy;
+        
+        // セルの見た目を変更
+        const cell = document.querySelector(`.cell.slot[data-day="${dayIdx}"][data-hour-idx="${hourIdx}"]`);
+        if (cell) {
+            if (setBusy) {
+                cell.classList.add('busy');
+            } else {
+                cell.classList.remove('busy');
+            }
+        }
+        // スケジュールが変わるたびに共通空き時間を再計算
+        calculateCommonFreeTime();
+    }
+
+    // メンバーリストの描画
+    function renderMemberList() {
+        const list = document.getElementById('memberList');
+        list.innerHTML = '';
+
+        Object.keys(members).forEach(name => {
+            const li = document.createElement('li');
+            li.className = `member-item ${name === currentMember ? 'active' : ''}`;
+            li.onclick = () => selectMember(name);
+
+            const nameSpan = document.createElement('span');
+            nameSpan.innerText = name;
+            li.appendChild(nameSpan);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'delete-btn';
+            delBtn.innerHTML = '&times;';
+            delBtn.title = '削除';
+            delBtn.onclick = (e) => {
+                e.stopPropagation(); // リスト選択イベントの発火を防ぐ
+                deleteMember(name);
+            };
+            li.appendChild(delBtn);
+
+            list.appendChild(li);
+        });
+    }
+
+    // メンバーを追加
+    function addMember() {
+        const input = document.getElementById('memberInput');
+        const name = input.value.trim();
+
+        if (!name) return;
+        if (members[name]) {
+            alert('同名のメンバーが既に存在します。');
+            return;
         }
 
-        // データの状態（期限切れかどうか）を自動判定して描画
-        function render() {
-            const listContainer = document.getElementById('todo-list');
-            listContainer.innerHTML = '';
+        members[name] = createEmptySchedule();
+        input.value = '';
+        currentMember = name; // 新規追加したメンバーを選択状態に
+        
+        renderMemberList();
+        updateCurrentMemberUI();
+        calculateCommonFreeTime();
+    }
 
-            const now = new Date();
-            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // メンバーを削除
+    function deleteMember(name) {
+        delete members[name];
+        
+        // 削除したメンバーが選択中だった場合、別のメンバーを選択
+        if (currentMember === name) {
+            const remaining = Object.keys(members);
+            currentMember = remaining.length > 0 ? remaining[0] : null;
+        }
 
-            // カウント用変数
-            let counts = { active: 0, completed: 0, expired: 0 };
+        renderMemberList();
+        updateCurrentMemberUI();
+        calculateCommonFreeTime();
+    }
 
-            // 振り分け処理
-            const processedTodos = todos.map(todo => {
-                let status = 'active';
-                if (todo.completed) {
-                    status = 'completed';
-                } else if (todo.deadline && todo.deadline < currentYearMonth) {
-                    status = 'expired';
-                }
-                counts[status]++;
-                return { ...todo, status };
+    // 編集するメンバーを切り替え
+    function selectMember(name) {
+        currentMember = name;
+        renderMemberList();
+        updateCurrentMemberUI();
+    }
+
+    // 現在選択中のメンバーに合わせてカレンダー表示を更新
+    function updateCurrentMemberUI() {
+        const titleEl = document.getElementById('currentMemberName');
+        const slots = document.querySelectorAll('.cell.slot');
+
+        if (!currentMember) {
+            titleEl.innerText = 'メンバーを選択してください';
+            slots.forEach(slot => {
+                slot.classList.remove('busy');
+                slot.style.opacity = '0.5';
+                slot.style.pointerEvents = 'none';
             });
+            return;
+        }
 
-            // バッジ数の更新
-            document.getElementById('count-active').innerText = counts.active;
-            document.getElementById('count-completed').innerText = counts.completed;
-            document.getElementById('count-expired').innerText = counts.expired;
+        titleEl.innerText = currentMember;
+        const schedule = members[currentMember];
 
-            // 現在のタブに該当するアイテムをフィルタリング
-            const filtered = processedTodos.filter(todo => todo.status === currentTab);
+        slots.forEach(slot => {
+            slot.style.opacity = '1';
+            slot.style.pointerEvents = 'auto';
+            const d = slot.dataset.day;
+            const h = slot.dataset.hourIdx;
+            
+            if (schedule[d][h]) {
+                slot.classList.add('busy');
+            } else {
+                slot.classList.remove('busy');
+            }
+        });
+    }
 
-            if (filtered.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="text-center py-12 text-slate-400 text-sm">
-                        <i data-lucide="clipboard-list" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-                        アイテムがありません
+    // 【コアロジック】全員が空いている共通の時間を算出
+    function calculateCommonFreeTime() {
+        const resultDiv = document.getElementById('matchingResults');
+        const memberNames = Object.keys(members);
+
+        if (memberNames.length === 0) {
+            resultDiv.innerHTML = '<p class="no-results">メンバーが登録されていません。</p>';
+            return;
+        }
+
+        let hasFreeSlots = false;
+        let htmlOutput = '';
+
+        // 各曜日ごとに走査
+        DAYS.forEach((day, dIdx) => {
+            let daySlotsHtml = '';
+            let inFreeBlock = false;
+            let blockStart = null;
+
+            // 1時間ごとに全員が空いているかチェック
+            for (let hIdx = 0; hIdx < TOTAL_HOURS; hIdx++) {
+                // 全員がこのコマ(dIdx, hIdx)において false (空き) であるか判定
+                let isEveryoneFree = memberNames.every(name => !members[name][dIdx][hIdx]);
+
+                if (isEveryoneFree) {
+                    if (!inFreeBlock) {
+                        inFreeBlock = true;
+                        blockStart = START_HOUR + hIdx;
+                    }
+                } else {
+                    if (inFreeBlock) {
+                        // 連続した空きブロックが途切れたのでバッジ化
+                        let blockEnd = START_HOUR + hIdx;
+                        daySlotsHtml += `<span class="time-badge">${blockStart}:00 ～ ${blockEnd}:00</span>`;
+                        inFreeBlock = false;
+                        hasFreeSlots = true;
+                    }
+                }
+            }
+
+            // 日の最後まで空きが続いていた場合の処理
+            if (inFreeBlock) {
+                let blockEnd = END_HOUR + 1;
+                daySlotsHtml += `<span class="time-badge">${blockStart}:00 ～ ${blockEnd}:00</span>`;
+                hasFreeSlots = true;
+            }
+
+            // その曜日に空き時間が1つでもあれば出力用文字列に追加
+            if (daySlotsHtml !== '') {
+                htmlOutput += `
+                    <div class="result-group">
+                        <div class="result-day-title">${day}曜日</div>
+                        <div>${daySlotsHtml}</div>
                     </div>
                 `;
-                lucide.createIcons();
-                return;
             }
+        });
 
-            // アイテムの生成
-            filtered.forEach(todo => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `flex items-center justify-between bg-white border border-slate-200 rounded-xl p-4 shadow-sm transition-all ${todo.completed ? 'opacity-60' : ''}`;
-
-                // 左側：チェックボックスとテキスト
-                const leftSide = document.createElement('div');
-                leftSide.className = "flex items-center gap-3 flex-1 min-w-0";
-
-                if (currentMode === 'edit') {
-                    const checkbox = document.createElement('input');
-                    checkbox.type = "checkbox";
-                    checkbox.checked = todo.completed;
-                    checkbox.className = "w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0";
-                    checkbox.onclick = () => toggleComplete(todo.id);
-                    leftSide.appendChild(checkbox);
-                } else {
-                    // 友達共有モードの時はアイコン表示
-                    const icon = document.createElement('div');
-                    icon.className = todo.completed ? "text-emerald-500 shrink-0" : "text-slate-300 shrink-0";
-                    icon.innerHTML = todo.completed ? '<i data-lucide="check-circle-2" class="w-5 h-5"></i>' : '<i data-lucide="circle" class="w-5 h-5"></i>';
-                    leftSide.appendChild(icon);
-                }
-
-                const textBlock = document.createElement('div');
-                textBlock.className = "min-w-0 flex-1";
-                
-                const titleP = document.createElement('p');
-                titleP.className = `text-sm font-medium text-slate-800 break-words ${todo.completed ? 'line-through text-slate-400' : ''}`;
-                titleP.innerText = todo.text;
-                textBlock.appendChild(titleP);
-
-                // 期限表示ラベル
-                if (todo.deadline) {
-                    const deadlineSpan = document.createElement('span');
-                    const [year, month] = todo.deadline.split('-');
-                    
-                    if (todo.status === 'expired') {
-                        deadlineSpan.className = "inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded mt-1";
-                        deadlineSpan.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i> ${year}年${month}月（期限切れ）`;
-                    } else if (todo.status === 'completed') {
-                        deadlineSpan.className = "inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded mt-1";
-                        deadlineSpan.innerHTML = `<i data-lucide="calendar" class="w-3 h-3"></i> 目標：${year}年${month}月`;
-                    } else {
-                        deadlineSpan.className = "inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded mt-1";
-                        deadlineSpan.innerHTML = `<i data-lucide="clock" class="w-3 h-3"></i> 期限：${year}年${month}月まで`;
-                    }
-                    textBlock.appendChild(deadlineSpan);
-                }
-                leftSide.appendChild(textBlock);
-
-                itemDiv.appendChild(leftSide);
-
-                // 右側：削除ボタン（編集モード時のみ）
-                if (currentMode === 'edit') {
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = "text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-slate-50 transition-colors ml-2 shrink-0";
-                    deleteBtn.onclick = () => deleteTodo(todo.id);
-                    deleteBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>';
-                    itemDiv.appendChild(deleteBtn);
-                }
-
-                listContainer.appendChild(itemDiv);
-            });
-
-            lucide.createIcons();
+        // 結果を画面に反映
+        if (hasFreeSlots) {
+            resultDiv.innerHTML = htmlOutput;
+        } else {
+            resultDiv.innerHTML = '<p class="no-results">全員の予定が空いている時間帯がありませんでした。</p>';
         }
+    }
+</script>
 
-        // 完了状態の切り替え
-        function toggleComplete(id) {
-            todos = todos.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo);
-            saveData();
-            render();
-        }
-
-        // アイテムの削除
-        function deleteTodo(id) {
-            if (confirm('このアイテムを削除しますか？')) {
-                todos = todos.filter(todo => todo.id !== id);
-                saveData();
-                render();
-            }
-        }
-
-        // タブ切り替え
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            // タブのUIアクティブ状態を切り替え
-            ['active', 'completed', 'expired'].forEach(t => {
-                const btn = document.getElementById(`tab-${t}`);
-                if (t === tab) {
-                    btn.classList.remove('border-transparent', 'text-slate-500');
-                    btn.classList.add('border-indigo-600', 'text-indigo-600');
-                } else {
-                    btn.classList.remove('border-indigo-600', 'text-indigo-600');
-                    btn.classList.add('border-transparent', 'text-slate-500');
-                }
-            });
-
-            render();
-        }
-
-        // モード切り替え（編集 vs 友達に見せる）
-        function setMode(mode) {
-            currentMode = mode;
-            const btnEdit = document.getElementById('btn-edit-mode');
-            const btnShare = document.getElementById('btn-share-mode');
-            const inputForm = document.getElementById('input-form');
-
-            if (mode === 'edit') {
-                btnEdit.className = "px-3 py-1.5 text-xs font-medium rounded-md flex items-center gap-1 transition-colors bg-indigo-50 text-indigo-700";
-                btnShare.className = "px-3 py-1.5 text-xs font-medium rounded-md flex items-center gap-1 transition-colors text-slate-600 hover:text-slate-900";
-                inputForm.style.display = 'block';
-            } else {
-                btnEdit.className = "px-3 py-1.5 text-xs font-medium rounded-md flex items-center gap-1 transition-colors text-slate-600 hover:text-slate-900";
-                btnShare.className = "px-3 py-1.5 text-xs font-medium rounded-md flex items-center gap-1 transition-colors bg-indigo-50 text-indigo-700";
-                inputForm.style.display = 'none';
-            }
-
-            render();
-        }
-
-        // ローカルストレージに保存
-        function saveData() {
-            localStorage.setItem('bucket_list_items', JSON.stringify(todos));
-        }
-
-        // 初期化実行
-        window.onload = init;
-    </script>
 </body>
 </html>
